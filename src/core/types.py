@@ -6,10 +6,12 @@ import numpy as np
 # Type alias — un frame es simplemente un array HxWxC uint8
 Frame = np.ndarray
 
+
 @dataclass
 class Keypoints:
-    coords: np.ndarray   # shape (17, 2)
-    scores: np.ndarray   # shape (17,)
+    coords: np.ndarray  # shape (17, 2)
+    scores: np.ndarray  # shape (17,)
+
 
 @dataclass
 class ExerciseState:
@@ -18,6 +20,7 @@ class ExerciseState:
     phase: str = "up"
     angle: float = 0.0
     feedback: str = ""
+
 
 @dataclass
 class Person:
