@@ -1,10 +1,22 @@
 app:
-  source: 0              # 0=webcam, o ruta de video/RTSP
+  source: 0
   display_window: true
   target_fps: 30
   max_persons: 20
 
+  window:
+    name: "AI Fitness Tracker"
+    initial_width: 1280
+    initial_height: 720
+    min_width: 860
+    min_height: 400
+
+  dashboard:
+    panel_width: 320          # ancho del panel lateral en px
+    panel_title: "CLASS STATS"
+    ids_per_line_limit: 34    # caracteres antes de hacer salto de línea en el desglose
+
 pipeline:
   use_threading: true
-  num_workers: 4         # threads para ejercicios paralelos
+  num_workers: 4
   frame_queue_size: 8
