@@ -1,0 +1,10 @@
+app:
+  source: 0              # 0=webcam, o ruta de video/RTSP
+  display_window: true
+  target_fps: 30
+  max_persons: 20
+
+pipeline:
+  use_threading: true
+  num_workers: 4         # threads para ejercicios paralelos
+  frame_queue_size: 8

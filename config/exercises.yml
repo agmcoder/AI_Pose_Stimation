@@ -1,0 +1,8 @@
+exercises:
+  squat:
+    enabled: true
+    keypoints: [hip, knee, ankle]   # índices COCO: 11/12, 13/14, 15/16
+    down_threshold: 90              # ángulo rodilla para "abajo"
+    up_threshold: 160               # ángulo rodilla para "arriba"
+    min_confidence: 0.5
+  # Extensible: añadir lunges, push_up, etc.

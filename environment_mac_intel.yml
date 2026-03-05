@@ -1,0 +1,21 @@
+name: pose_tracker_mac_intel
+channels:
+  - pytorch          # único canal que resuelve torch en osx-64
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  # PyTorch vía channel oficial — resuelve osx-x86_64 correctamente
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - conda-forge::opencv>=4.9
+  - conda-forge::pyyaml
+  - conda-forge::loguru
+  - conda-forge::rich
+  - conda-forge::numpy<2
+  - pip:
+      - ultralytics>=8.2
+      - lap
+      - filterpy

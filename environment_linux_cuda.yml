@@ -1,0 +1,23 @@
+name: pose_tracker_linux_cuda
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  # pytorch-cuda disponible: 11.8, 12.1, 12.4 — usamos la más reciente
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - pytorch::pytorch-cuda=12.4
+  - conda-forge::opencv>=4.9
+  - conda-forge::pyyaml
+  - conda-forge::loguru
+  - conda-forge::rich
+  - conda-forge::numpy<2
+  - pip:
+      - ultralytics>=8.2
+      - lap
+      - filterpy
