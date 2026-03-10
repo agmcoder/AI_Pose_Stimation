@@ -1,8 +1,24 @@
 exercises:
   squat:
     enabled: true
-    keypoints: [hip, knee, ankle]   # índices COCO: 11/12, 13/14, 15/16
-    down_threshold: 90              # ángulo rodilla para "abajo"
-    up_threshold: 160               # ángulo rodilla para "arriba"
     min_confidence: 0.5
-  # Extensible: añadir lunges, push_up, etc.
+
+    knee:
+      # Rango válido de rodilla en posición DOWN
+      down_min: 80        # < 80° = demasiado profundo
+      down_max: 120       # > 120° = no baja suficiente
+      up_threshold: 155   # ángulo mínimo para considerar posición UP
+
+    hip:
+      # Rango válido de cadera en posición DOWN
+      down_min: 50        # < 50° = cadera demasiado cerrada
+      down_max: 75        # > 75° = cadera no baja suficiente
+      up_threshold: 150   # ángulo mínimo para considerar posición UP
+
+    feedback:
+      valid_rep:    "✅ Rep completada"
+      knee_low:     "⚠️ Rodilla demasiado cerrada"
+      knee_high:    "⚠️ Baja más la rodilla"
+      hip_low:      "⚠️ Cadera demasiado cerrada"
+      hip_high:     "⚠️ Baja más la cadera"
+      bad_form_rep: "⚡ Rep contada (mejorar técnica)"

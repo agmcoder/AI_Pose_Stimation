@@ -33,9 +33,21 @@ class Renderer:
 
     def _draw_info(self, frame, person: Person, color):
         x1, y1, _, _ = [int(v) for v in person.bbox]
-        cv2.putText(frame, f"ID:{person.track_id}", (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-        for i, (ex, state) in enumerate(person.exercises.items()):
-            text = f"{ex}: {state.rep_count} reps | {state.angle:.0f}°"
-            cv2.putText(frame, text, (x1, y1 - 28 - i*18),
+        cv2.putText(frame, f"ID:{person.track_id}",
+                    (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        for i, (name, state) in enumerate(person.exercises.items()):
+            # Ángulos de rodilla y cadera si están disponibles
+            knee = state.angles.get("knee", state.angle)
+            hip  = state.angles.get("hip", 0.0)
+            text = f"{name}: {state.rep_count} reps | K:{knee:.0f}° H:{hip:.0f}°"
+            cv2.putText(frame, text,
+                        (x1, y1 - 28 - i * 18),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
+        # Feedback en rojo si hay problema de técnica
+        if any(s.feedback for s in person.exercises.values()):
+            fb = " | ".join(s.feedback for s in person.exercises.values() if s.feedback)
+            cv2.putText(frame, fb,
+                        (x1, y1 - 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1)

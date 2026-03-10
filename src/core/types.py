@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 import numpy as np
 
-# Type alias — un frame es simplemente un array HxWxC uint8
 Frame = np.ndarray
 
 @dataclass
@@ -16,8 +15,10 @@ class ExerciseState:
     name: str
     rep_count: int = 0
     phase: str = "up"
-    angle: float = 0.0
+    angle: float = 0.0                              # ángulo principal (rodilla)
+    angles: Dict[str, float] = field(default_factory=dict)  # ← nuevo: todas las articulaciones
     feedback: str = ""
+    valid_down: bool = False                        # ← nuevo: bajada técnicamente válida
 
 @dataclass
 class Person:
