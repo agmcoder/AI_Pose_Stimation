@@ -1,10 +1,11 @@
 import cv2
 import yaml
-import platform
 from loguru import logger
 from src.pipeline.device_selector import select_device
 from src.models.yolo_pose import YoloPoseDetector
 from src.pipeline.frame_processor import FrameProcessor
+from src.pipeline.person_registry import PersonRegistry
+from src.tracking.exercise_counter import ExerciseCounter
 from src.visualization.dashboard_renderer import DashboardRenderer
 
 
@@ -14,28 +15,32 @@ def load_config(path: str) -> dict:
 
 
 def create_window(name: str, width: int, height: int) -> None:
-    flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO
-    cv2.namedWindow(name, flags)
+    cv2.namedWindow(name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     cv2.resizeWindow(name, width, height)
 
 
 def main():
-    app_cfg   = load_config("config/app.yml")["app"]
-    pipe_cfg  = load_config("config/app.yml")["pipeline"]
-    model_cfg = load_config("config/model.yml")["model"]
-    ex_cfg    = load_config("config/exercises.yml")["exercises"]
-
+    # ── Configuración ─────────────────────────────────────────────────────────
+    app_cfg       = load_config("config/app.yml")["app"]
+    pipe_cfg      = load_config("config/app.yml")["pipeline"]
+    model_cfg     = load_config("config/model.yml")["model"]
+    ex_cfg        = load_config("config/exercises.yml")["exercises"]
     win_cfg       = app_cfg["window"]
     dashboard_cfg = app_cfg["dashboard"]
 
+    # ── Pipeline ──────────────────────────────────────────────────────────────
     device    = select_device(model_cfg["device"])
+    counter   = ExerciseCounter()
     detector  = YoloPoseDetector(model_cfg, device)
-    processor = FrameProcessor(ex_cfg, pipe_cfg["num_workers"])
-    renderer  = DashboardRenderer(win_cfg, dashboard_cfg)
+    processor = FrameProcessor(ex_cfg, pipe_cfg["num_workers"], counter)
+    registry  = PersonRegistry()
+    renderer  = DashboardRenderer(win_cfg, dashboard_cfg, counter)
 
-    cv2.namedWindow(win_cfg["name"], cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(win_cfg["name"], win_cfg["initial_width"], win_cfg["initial_height"])
+    # ── Ventana ───────────────────────────────────────────────────────────────
+    if app_cfg["display_window"]:
+        create_window(win_cfg["name"], win_cfg["initial_width"], win_cfg["initial_height"])
 
+    # ── Stream ────────────────────────────────────────────────────────────────
     cap = cv2.VideoCapture(app_cfg["source"])
     logger.info("🎥 Iniciando stream — pulsa Q para salir")
 
@@ -44,8 +49,10 @@ def main():
         if not ok:
             break
 
-        persons = detector.detect(frame)
-        persons = processor.process(persons)
+        persons = detector.detect(frame)      # Person[] frescos, sin historial
+        persons = registry.merge(persons)     # restaurar estado acumulado por track_id
+        persons = processor.process(persons)  # detectar ejercicios + emitir eventos
+        registry.persist(persons)             # guardar estado post-procesamiento
 
         if app_cfg["display_window"]:
             rect = cv2.getWindowImageRect(win_cfg["name"])
@@ -60,7 +67,8 @@ def main():
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
-
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

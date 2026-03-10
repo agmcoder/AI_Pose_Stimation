@@ -19,11 +19,38 @@ class ITracker(ABC):
         ...
 
 
-class IExerciseDetector(ABC):
+class IExerciseCounter(ABC):              # ← PRIMERO: no depende de nadie
+    """
+    SRP: única responsabilidad — almacenar y consultar repeticiones.
+    Event sink: recibe eventos de rep completada y acumula.
+    """
+
+    @abstractmethod
+    def record(self, track_id: int, exercise: str) -> None:
+        ...
+
+    @abstractmethod
+    def total(self, exercise: str) -> int:
+        ...
+
+    @abstractmethod
+    def by_id(self, exercise: str) -> dict[int, int]:
+        ...
+
+    @abstractmethod
+    def all_exercises(self) -> dict[str, dict[int, int]]:
+        ...
+
+    @abstractmethod
+    def reset(self) -> None:
+        ...
+
+
+class IExerciseDetector(ABC):             # ← DESPUÉS: ya conoce IExerciseCounter
     """Liskov: todos los ejercicios son intercambiables."""
 
     @abstractmethod
-    def update(self, person: Person) -> ExerciseState:
+    def update(self, person: Person, counter: IExerciseCounter) -> ExerciseState:
         ...
 
 

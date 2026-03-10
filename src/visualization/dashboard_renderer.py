@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
-from ..core.interfaces import IRenderer
+from ..core.interfaces import IExerciseCounter, IRenderer
 from ..core.types import Frame, Person
 from .renderer import Renderer
-from .stats_aggreator import StatsAggregator, ExerciseSummary
+from src.visualization.stats_aggreator import StatsAggregator, ExerciseSummary
 
 # ── Tema visual (estilo puro, no configuración operacional) ──────────────────
 _BG_COLOR     = (20,  20,  20)
@@ -30,9 +30,10 @@ class DashboardRenderer(IRenderer):
     DIP          : recibe configuración inyectada desde YAML.
     """
 
-    def __init__(self, window_cfg: dict, dashboard_cfg: dict):
+    def __init__(self, window_cfg: dict, dashboard_cfg: dict, counter: IExerciseCounter):
         self._video_renderer = Renderer()
         self._aggregator     = StatsAggregator()
+        self._counter        = counter              # ← esta línea falta en tu fichero
 
         self._min_w        = window_cfg["min_width"]
         self._min_h        = window_cfg["min_height"]
@@ -41,6 +42,7 @@ class DashboardRenderer(IRenderer):
         self._panel_width  = dashboard_cfg["panel_width"]
         self._panel_title  = dashboard_cfg["panel_title"]
         self._ids_per_line = dashboard_cfg["ids_per_line_limit"]
+
 
     # ── IRenderer contract ───────────────────────────────────────────────────
     def render(
@@ -54,7 +56,7 @@ class DashboardRenderer(IRenderer):
         Si es None usa la resolución nativa del frame (tests / grabación).
         """
         video_frame = self._video_renderer.render(frame, persons)
-        summaries   = self._aggregator.compute(persons)
+        summaries   = self._aggregator.compute(self._counter)
 
         if display_size is None:
             panel = self._build_panel(video_frame.shape[0], summaries, len(persons))
