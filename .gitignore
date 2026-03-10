@@ -4,4 +4,4 @@ __pycache__/
 *.pt
 
 # Aider
-.aider*
+#.aider*
