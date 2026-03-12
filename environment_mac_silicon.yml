@@ -1,12 +1,13 @@
-name: pose_tracker_mac_intel
+name: pose_tracker_mac_silicon
 channels:
-  - pytorch          # único canal que resuelve torch en osx-64
+  - pytorch          # PyTorch oficial — resuelve osx-arm64 correctamente
   - conda-forge
   - defaults
 dependencies:
   - python=3.11
   - pip
-  # PyTorch vía channel oficial — resuelve osx-x86_64 correctamente
+  # PyTorch con soporte MPS (Metal Performance Shaders) — Apple Silicon
+  # No existe pytorch-cuda en arm64; la GPU se activa vía MPS automáticamente
   - pytorch::pytorch
   - pytorch::torchvision
   - pytorch::torchaudio

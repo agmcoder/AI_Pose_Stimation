@@ -1,16 +1,42 @@
+"""
+main.py — AI Fitness Tracker (PySide6 edition)
+
+Orchestration layer: wires domain pipeline with the new presentation layer.
+No domain logic lives here, only wiring and the frame-tick callback.
+
+Architecture:
+  QApplication  — Qt event loop owner
+  QTimer        — drives the frame-tick at maximum throughput
+  DashboardPresenter — translates domain → ViewModels each tick
+  ApplicationWindow  — two-panel Qt window (stats left, video right)
+
+Clean shutdown:
+  qt_app.aboutToQuit signal guarantees data_bus.close() + cap.release()
+  even if the user closes with the window X button or Ctrl+Q.
+"""
+import sys
 import time
+
 import cv2
 import yaml
 from loguru import logger
-from src.pipeline.device_selector import select_device
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
+
+from src.data_collection.bus import DataCollectionBus
+from src.data_collection.factory import create_collectors
+from src.data_collection.record_builder import build_frame_records
 from src.models.yolo_pose import YoloPoseDetector
+from src.pipeline.device_selector import select_device
 from src.pipeline.frame_processor import FrameProcessor
 from src.pipeline.person_registry import PersonRegistry
+from src.presentation.presenter import DashboardPresenter
+from src.presentation.widgets.main_window import ApplicationWindow
 from src.tracking.exercise_counter import ExerciseCounter
-from src.visualization.dashboard_renderer import DashboardRenderer
-from src.data_collection.factory import create_collectors
-from src.data_collection.bus import DataCollectionBus
-from src.data_collection.record_builder import build_frame_records
+from src.visualization.renderer import Renderer
+
+
+# ── Config helpers ────────────────────────────────────────────────────────────
 
 
 def load_config(path: str) -> dict:
@@ -18,13 +44,11 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def create_window(name: str, width: int, height: int) -> None:
-    cv2.namedWindow(name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-    cv2.resizeWindow(name, width, height)
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 
-def main():
-    # ── Configuración ─────────────────────────────────────────────────────────
+def main() -> None:
+    # ── Configuration ─────────────────────────────────────────────────────────
     app_cfg       = load_config("config/app.yml")["app"]
     pipe_cfg      = load_config("config/app.yml")["pipeline"]
     model_cfg     = load_config("config/model.yml")["model"]
@@ -32,61 +56,79 @@ def main():
     win_cfg       = app_cfg["window"]
     dashboard_cfg = app_cfg["dashboard"]
 
-    # ── Pipeline ──────────────────────────────────────────────────────────────
+    # ── Domain pipeline (unchanged) ───────────────────────────────────────────
     device    = select_device(model_cfg["device"])
     counter   = ExerciseCounter()
     detector  = YoloPoseDetector(model_cfg, device)
     processor = FrameProcessor(ex_cfg, pipe_cfg["num_workers"], counter)
     registry  = PersonRegistry()
-    renderer  = DashboardRenderer(win_cfg, dashboard_cfg, counter)
+    renderer  = Renderer()              # draws skeletons / overlays on frames
 
-    # ── Data Collection ───────────────────────────────────────────────────────
+    # ── Data collection (unchanged) ───────────────────────────────────────────
     collectors = create_collectors(app_cfg.get("data_collection", {}))
     data_bus   = DataCollectionBus(collectors)
 
-    # ── Ventana ───────────────────────────────────────────────────────────────
-    if app_cfg["display_window"]:
-        create_window(win_cfg["name"], win_cfg["initial_width"], win_cfg["initial_height"])
+    # ── Presentation layer ────────────────────────────────────────────────────
+    qt_app    = QApplication(sys.argv)
+    presenter = DashboardPresenter(counter)
+    window    = ApplicationWindow(win_cfg, dashboard_cfg)
+    window.show()
 
-    # ── Stream ────────────────────────────────────────────────────────────────
+    # ── Video capture ─────────────────────────────────────────────────────────
     cap = cv2.VideoCapture(app_cfg["source"])
-    logger.info("🎥 Iniciando stream — pulsa Q para salir")
+    if not cap.isOpened():
+        logger.error("❌ No se pudo abrir la fuente de vídeo: {}", app_cfg["source"])
+        sys.exit(1)
+
+    logger.info("🎥 Iniciando stream — cierra la ventana para salir")
     frame_number = 0
 
-    while cap.isOpened():
+    # ── Frame-tick callback ───────────────────────────────────────────────────
+
+    def process_frame() -> None:
+        nonlocal frame_number
+
         ok, frame = cap.read()
         if not ok:
-            break
+            logger.warning("⚠️ Stream terminado o frame inválido — cerrando")
+            qt_app.quit()
+            return
 
-        persons = detector.detect(frame)      # Person[] frescos, sin historial
-        persons = registry.merge(persons)     # restaurar estado acumulado por track_id
-        persons = processor.process(persons)  # detectar ejercicios + emitir eventos
-        registry.persist(persons)             # guardar estado post-procesamiento
+        # Domain pipeline (unchanged logic)
+        persons = detector.detect(frame)
+        persons = registry.merge(persons)
+        persons = processor.process(persons)
+        registry.persist(persons)
 
-        # ── Data Collection (non-invasive, after all processing) ──────────
+        # Data collection
         timestamp = time.time()
         for record in build_frame_records(persons, frame_number, timestamp):
             data_bus.on_frame(record)
         frame_number += 1
 
-        if app_cfg["display_window"]:
-            rect = cv2.getWindowImageRect(win_cfg["name"])
-            raw_w, raw_h = rect[2], rect[3]
+        # Render skeleton overlays (OpenCV, on the frame only)
+        annotated = renderer.render(frame, persons)
 
-            canvas_w = max(raw_w, win_cfg["min_width"])  if raw_w > 0 else win_cfg["initial_width"]
-            canvas_h = max(raw_h, win_cfg["min_height"]) if raw_h > 0 else win_cfg["initial_height"]
+        # Build ViewModels and push to widgets
+        window.video_panel.update_frame(presenter.build_video_vm(annotated))
+        window.stats_panel.update_stats(presenter.build_dashboard_vm(persons))
 
-            output = renderer.render(frame, persons, display_size=(canvas_w, canvas_h))
-            cv2.imshow(win_cfg["name"], output)
+    # ── QTimer drives the loop ────────────────────────────────────────────────
+    timer = QTimer()
+    timer.timeout.connect(process_frame)
+    timer.start(1)   # interval=1ms → as fast as cap.read() allows
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+    # ── Clean shutdown ────────────────────────────────────────────────────────
+    def on_quit() -> None:
+        timer.stop()
+        data_bus.close()
+        cap.release()
+        logger.info("✅ Recursos liberados correctamente")
 
-    data_bus.close()
-    cap.release()
-    cv2.destroyAllWindows()
+    qt_app.aboutToQuit.connect(on_quit)
+
+    sys.exit(qt_app.exec())
 
 
 if __name__ == "__main__":
     main()
-
