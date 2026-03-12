@@ -16,6 +16,15 @@ app:
     panel_title: "CLASS STATS"
     ids_per_line_limit: 34    # caracteres antes de hacer salto de línea en el desglose
 
+  data_collection:
+    enabled: true
+    output_dir: "data/sessions"
+    backends:
+      - type: csv
+        filename_prefix: "frames"
+      - type: jsonl
+        filename_prefix: "session"
+
 pipeline:
   use_threading: true
   num_workers: 4

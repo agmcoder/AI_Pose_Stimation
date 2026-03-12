@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import List
+from typing import TYPE_CHECKING, List
+
 from .types import Frame, Person, ExerciseState
+
+if TYPE_CHECKING:
+    from .types import FrameRecord, RepRecord
 
 
 class IDetector(ABC):
@@ -59,4 +65,31 @@ class IRenderer(ABC):
 
     @abstractmethod
     def render(self, frame: Frame, persons: List[Person]) -> Frame:
+        ...
+
+
+class IDataCollector(ABC):
+    """
+    Interface Segregation: sólo expone ingesta de datos, no detalles de almacenamiento.
+    Dependency Inversion: el main loop depende de esta abstracción, no de CSV/JSON/DB.
+    """
+
+    @abstractmethod
+    def on_frame(self, record: FrameRecord) -> None:
+        """Persiste un registro de un frame procesado."""
+        ...
+
+    @abstractmethod
+    def on_rep(self, record: RepRecord) -> None:
+        """Persiste un registro de una repetición completada."""
+        ...
+
+    @abstractmethod
+    def flush(self) -> None:
+        """Fuerza la escritura de datos en buffer al destino."""
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        """Libera recursos y realiza flush final."""
         ...

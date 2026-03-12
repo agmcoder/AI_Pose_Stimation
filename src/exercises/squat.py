@@ -124,9 +124,9 @@ class SquatDetector(IExerciseDetector):
             # Detectar subida completa
             elif knee_up and hip_up:
                 state.phase = "up"
-                counter.record(person.track_id, "squat")
 
                 if state.valid_down:
+                    counter.record(person.track_id, "squat")
                     state.feedback = self.fb["valid_rep"]
                 else:
                     state.feedback = self.fb["bad_form_rep"]
