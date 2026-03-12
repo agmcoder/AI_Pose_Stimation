@@ -1,7 +1,12 @@
 *venv/
 __pycache__/
 
+# AI Models
 *.pt
+
+# Data Collections
+*.csv
+*.jsonl
 
 # Aider
 #.aider*

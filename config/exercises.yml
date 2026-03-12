@@ -18,7 +18,7 @@ exercises:
     feedback:
       valid_rep:    "✅ Rep completada"
       knee_low:     "⚠️ Rodilla demasiado cerrada"
-      knee_high:    "⚠️ Baja más la rodilla"
+      knee_high:    "⚠️ Baja mas la rodilla"
       hip_low:      "⚠️ Cadera demasiado cerrada"
-      hip_high:     "⚠️ Baja más la cadera"
-      bad_form_rep: "⚡ Rep no contada (mejorar técnica)"
+      hip_high:     "⚠️ Baja mas la cadera"
+      bad_form_rep: "⚡ Rep no contada (mejorar tecnica)"
