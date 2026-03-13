@@ -5,6 +5,7 @@ def build_frame_records(
     persons: list[Person],
     frame_number: int,
     timestamp: float,
+    current_fps: float = 0.0,
 ) -> list[FrameRecord]:
     """
     Transforma la lista de Person del frame actual en FrameRecords.
@@ -34,6 +35,7 @@ def build_frame_records(
             timestamp=timestamp,
             frame_number=frame_number,
             track_id=person.track_id,
+            fps=current_fps,
             bbox=person.bbox,
             keypoints_xy=person.keypoints.coords.copy(),
             keypoints_conf=person.keypoints.scores.copy(),

@@ -20,7 +20,14 @@ import numpy as np
 from src.core.interfaces import IExerciseCounter
 from src.core.types import Person
 
-from .viewmodels import DashboardVM, ExerciseStatsVM, PersonStatsVM, VideoFrameVM
+from .viewmodels import (
+    DashboardVM,
+    ExerciseChecklistItemVM,
+    ExerciseChecklistVM,
+    ExerciseStatsVM,
+    PersonStatsVM,
+    VideoFrameVM,
+)
 
 
 class DashboardPresenter:
@@ -42,15 +49,32 @@ class DashboardPresenter:
         h, w = annotated_frame.shape[:2]
         return VideoFrameVM(frame=annotated_frame, width=w, height=h)
 
-    def build_dashboard_vm(self, persons: list[Person]) -> DashboardVM:
+    def build_dashboard_vm(self, persons: list[Person], current_fps: float = 0.0) -> DashboardVM:
         """Build the full dashboard snapshot from counter + persons."""
         all_exercises = self._counter.all_exercises()
         return DashboardVM(
             num_tracked=len(persons),
+            current_fps=current_fps,
             exercise_totals={ex: self._counter.total(ex) for ex in all_exercises},
             exercise_by_id=all_exercises,
             persons=[self._build_person_vm(p) for p in persons],
         )
+
+    def build_checklist_vm(
+        self,
+        available: list[str],
+        active: set[str],
+    ) -> ExerciseChecklistVM:
+        """Build checklist VM from pipeline state."""
+        items = tuple(
+            ExerciseChecklistItemVM(
+                name=name,
+                display_name=name.replace("_", " ").upper(),
+                is_active=name in active,
+            )
+            for name in available
+        )
+        return ExerciseChecklistVM(items=items)
 
     # ── Private helpers ──────────────────────────────────────────────────────
 

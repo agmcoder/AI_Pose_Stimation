@@ -16,6 +16,7 @@ Clean shutdown:
 """
 import sys
 import time
+from collections import deque
 
 import cv2
 import yaml
@@ -42,6 +43,22 @@ from src.visualization.renderer import Renderer
 def load_config(path: str) -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+class FpsTracker:
+    """Calculates moving average FPS over the last N frames."""
+
+    def __init__(self, window_size: int = 30) -> None:
+        self._times: deque[float] = deque(maxlen=window_size)
+
+    def tick(self, current_time: float) -> float:
+        self._times.append(current_time)
+        if len(self._times) < 2:
+            return 0.0
+        elapsed = self._times[-1] - self._times[0]
+        if elapsed == 0:
+            return 0.0
+        return (len(self._times) - 1) / elapsed
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -74,6 +91,14 @@ def main() -> None:
     window    = ApplicationWindow(win_cfg, dashboard_cfg)
     window.show()
 
+    # ── Exercise checklist wiring ──────────────────────────────────────────────
+    checklist_vm = presenter.build_checklist_vm(
+        processor.available_exercises(),
+        processor.active_exercise_names(),
+    )
+    window.exercise_checklist.update_checklist(checklist_vm)
+    window.exercise_checklist.exercises_changed.connect(processor.set_active_exercises)
+
     # ── Video capture ─────────────────────────────────────────────────────────
     cap = cv2.VideoCapture(app_cfg["source"])
     if not cap.isOpened():
@@ -82,6 +107,7 @@ def main() -> None:
 
     logger.info("🎥 Iniciando stream — cierra la ventana para salir")
     frame_number = 0
+    fps_tracker = FpsTracker(window_size=30)
 
     # ── Frame-tick callback ───────────────────────────────────────────────────
 
@@ -100,9 +126,14 @@ def main() -> None:
         persons = processor.process(persons)
         registry.persist(persons)
 
-        # Data collection
+        # Data collection & FPS
         timestamp = time.time()
-        for record in build_frame_records(persons, frame_number, timestamp):
+        current_fps = fps_tracker.tick(timestamp)
+
+        if frame_number > 0 and frame_number % 30 == 0:
+            logger.debug("FPS: {:.1f} | Tracked: {}", current_fps, len(persons))
+
+        for record in build_frame_records(persons, frame_number, timestamp, current_fps):
             data_bus.on_frame(record)
         frame_number += 1
 
@@ -111,7 +142,7 @@ def main() -> None:
 
         # Build ViewModels and push to widgets
         window.video_panel.update_frame(presenter.build_video_vm(annotated))
-        window.stats_panel.update_stats(presenter.build_dashboard_vm(persons))
+        window.stats_panel.update_stats(presenter.build_dashboard_vm(persons, current_fps))
 
     # ── QTimer drives the loop ────────────────────────────────────────────────
     timer = QTimer()

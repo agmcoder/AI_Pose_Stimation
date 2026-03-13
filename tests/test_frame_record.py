@@ -26,6 +26,7 @@ def _make_frame_record(**overrides) -> FrameRecord:
         timestamp=1710000000.0,
         frame_number=42,
         track_id=7,
+        fps=30.0,
         bbox=(100.0, 200.0, 300.0, 400.0),
         keypoints_xy=np.random.rand(17, 2).astype(np.float32),
         keypoints_conf=np.random.rand(17).astype(np.float32),
@@ -90,14 +91,14 @@ class TestFrameRecord:
     def test_to_csv_row_length(self):
         record = _make_frame_record()
         row = record.to_csv_row()
-        # 3 metadata + 4 bbox + 17*3 keypoints = 58
-        assert len(row) == 58
+        # 4 metadata + 4 bbox + 17*3 keypoints = 59
+        assert len(row) == 59
 
     def test_csv_header_length_matches_row(self):
         record = _make_frame_record()
         header = FrameRecord.csv_header()
         row = record.to_csv_row()
-        assert len(header) == len(row)
+        assert len(header) == 59
 
     def test_to_dict_exercises_multi(self):
         """Verifica soporte multi-ejercicio."""

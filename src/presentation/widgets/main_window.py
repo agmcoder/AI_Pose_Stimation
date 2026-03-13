@@ -28,8 +28,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMainWindow, QSplitter, QStatusBar, QWidget
+from PySide6.QtWidgets import QMainWindow, QSplitter, QStatusBar, QVBoxLayout, QWidget
 
+from .exercise_checklist import ExerciseChecklist
 from .stats_panel import StatsPanel
 from .video_panel import VideoPanel
 
@@ -75,6 +76,10 @@ class ApplicationWindow(QMainWindow):
     def stats_panel(self) -> StatsPanel:
         return self._stats_panel
 
+    @property
+    def exercise_checklist(self) -> ExerciseChecklist:
+        return self._exercise_checklist
+
     # ── IApplicationWindow ────────────────────────────────────────────────────
 
     def show(self) -> None:           # type: ignore[override]
@@ -108,22 +113,33 @@ class ApplicationWindow(QMainWindow):
             self.setStyleSheet(_QSS_PATH.read_text(encoding="utf-8"))
 
     def _setup_layout(self) -> None:
-        # Create the two panels
+        # Create the panels
         self._stats_panel = StatsPanel(self._dashboard_cfg, parent=self)
         self._video_panel = VideoPanel(parent=self)
+        self._exercise_checklist = ExerciseChecklist(parent=self)
+
+        # Left column: checklist on top, stats below
+        left_column = QWidget(self)
+        left_layout = QVBoxLayout(left_column)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+        left_layout.addWidget(self._exercise_checklist)
+        left_layout.addWidget(self._stats_panel, stretch=1)
+
+        panel_w = self._dashboard_cfg.get("panel_width", 320)
+        left_column.setFixedWidth(panel_w)
 
         # QSplitter: horizontal, left panel not collapsible
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.setHandleWidth(0)          # invisible handle — fixed panel
         splitter.setChildrenCollapsible(False)
 
-        splitter.addWidget(self._stats_panel)
+        splitter.addWidget(left_column)
         splitter.addWidget(self._video_panel)
 
         # Pin panel width and prevent interactive resizing of the left widget
-        panel_w = self._dashboard_cfg.get("panel_width", 320)
         splitter.setSizes([panel_w, self.width() - panel_w])
-        splitter.setStretchFactor(0, 0)   # stats panel: no stretch
+        splitter.setStretchFactor(0, 0)   # left column: no stretch
         splitter.setStretchFactor(1, 1)   # video panel: all stretch
 
         self.setCentralWidget(splitter)

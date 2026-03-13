@@ -17,6 +17,7 @@ def _make_frame_record(frame_number: int = 0) -> FrameRecord:
         timestamp=1710000000.0 + frame_number,
         frame_number=frame_number,
         track_id=1,
+        fps=30.0,
         bbox=(10.0, 20.0, 110.0, 220.0),
         keypoints_xy=np.random.rand(17, 2).astype(np.float32),
         keypoints_conf=np.random.rand(17).astype(np.float32),
@@ -39,7 +40,7 @@ class TestCsvCollector:
                 header = next(reader)
                 assert header[0] == "timestamp"
                 assert "kp0_x" in header
-                assert len(header) == 58  # 3 meta + 4 bbox + 17*3 kps
+                assert len(header) == 59  # 4 meta + 4 bbox + 17*3 kps
 
     def test_row_count_matches_records(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -105,8 +105,9 @@ class StatsPanel(QWidget):
         layout.setContentsMargins(0, 4, 0, 4)
         layout.setSpacing(0)
 
-        # Tracked count
-        tracked_lbl = QLabel(f"Tracked persons: {vm.num_tracked}")
+        # Tracked count & FPS
+        header_text = f"Tracked persons: {vm.num_tracked}    |    FPS: {vm.current_fps:.1f}"
+        tracked_lbl = QLabel(header_text)
         tracked_lbl.setObjectName("TrackedLabel")
         layout.addWidget(tracked_lbl)
         layout.addWidget(self._make_divider())

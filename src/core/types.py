@@ -62,6 +62,7 @@ class FrameRecord:
     bbox: Tuple[float, float, float, float]
     keypoints_xy: np.ndarray                         # (17, 2)
     keypoints_conf: np.ndarray                       # (17,)
+    fps: float                                       # ← nuevo: frames per second
     exercises: Dict[str, ExerciseSnapshot] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -70,6 +71,7 @@ class FrameRecord:
             "timestamp": float(self.timestamp),
             "frame_number": int(self.frame_number),
             "track_id": int(self.track_id),
+            "fps": float(self.fps),
             "bbox": [float(v) for v in self.bbox],
             "keypoints_xy": self.keypoints_xy.tolist(),
             "keypoints_conf": self.keypoints_conf.tolist(),
@@ -82,6 +84,7 @@ class FrameRecord:
             self.timestamp,
             self.frame_number,
             self.track_id,
+            self.fps,
             *self.bbox,
         ]
         # 17 keypoints × 3 (x, y, conf) = 51 columnas
@@ -96,7 +99,7 @@ class FrameRecord:
     @staticmethod
     def csv_header() -> list[str]:
         """Nombres de columna para CSV."""
-        header = ["timestamp", "frame_number", "track_id",
+        header = ["timestamp", "frame_number", "track_id", "fps",
                   "bbox_x1", "bbox_y1", "bbox_x2", "bbox_y2"]
         for i in range(17):
             header.extend([f"kp{i}_x", f"kp{i}_y", f"kp{i}_conf"])

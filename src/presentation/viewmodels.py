@@ -48,6 +48,7 @@ class DashboardVM:
     """
 
     num_tracked: int
+    current_fps: float
     exercise_totals: dict[str, int]                # {exercise_name: total_reps_all_ids}
     exercise_by_id: dict[str, dict[int, int]]      # {exercise_name: {track_id: reps}}
     persons: list[PersonStatsVM] = field(default_factory=list)
@@ -63,3 +64,22 @@ class VideoFrameVM:
     frame: np.ndarray    # BGR, uint8 — already annotated with skeleton/overlays
     width: int
     height: int
+
+
+# ── Exercise Checklist ViewModels ────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class ExerciseChecklistItemVM:
+    """One exercise in the checklist — presentation only."""
+
+    name: str
+    display_name: str   # "SQUAT", "LUNGE", etc.
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class ExerciseChecklistVM:
+    """Full checklist state, built by the Presenter."""
+
+    items: tuple[ExerciseChecklistItemVM, ...]
