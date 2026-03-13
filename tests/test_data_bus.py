@@ -15,6 +15,7 @@ def _make_frame_record() -> FrameRecord:
         timestamp=1710000000.0,
         frame_number=1,
         track_id=1,
+        fps=30.0,
         bbox=(0.0, 0.0, 100.0, 200.0),
         keypoints_xy=np.zeros((17, 2), dtype=np.float32),
         keypoints_conf=np.ones(17, dtype=np.float32),

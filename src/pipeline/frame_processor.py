@@ -24,6 +24,18 @@ class FrameProcessor:
         }
         return [fut.result() for fut in futures]
 
+    def set_active_exercises(self, names: set[str]) -> None:
+        """Delega al registry el filtrado de ejercicios activos."""
+        self.registry.set_active(names)
+
+    def available_exercises(self) -> list[str]:
+        """Ejercicios disponibles para la checklist."""
+        return self.registry.available_names
+
+    def active_exercise_names(self) -> set[str]:
+        """Ejercicios actualmente activos."""
+        return set(self.registry.active_detectors.keys())
+
     def _process_person(self, person: Person) -> Person:
         for ex_name, detector in self.registry.active_detectors.items():
             person.exercises[ex_name] = detector.update(person, self._counter)

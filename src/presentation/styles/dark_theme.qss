@@ -1,0 +1,120 @@
+/* src/presentation/styles/dark_theme.qss
+   Dark theme — mirrors the visual palette of the legacy OpenCV panel.
+   Colours:
+     background    #141414  (20, 20, 20)
+     panel darker  #0e0e0e
+     header text   #ffc800  (255, 200, 0)
+     accent green  #64dc64  (100, 220, 100)
+     body text     #e6e6e6  (230, 230, 230)
+     muted text    #a0a0a0  (160, 160, 160)
+     separator     #3c3c3c  ( 60,  60, 60)
+     border        #2d2d2d
+*/
+
+/* ── Global ─────────────────────────────────────────────────────── */
+QMainWindow, QWidget {
+    background-color: #141414;
+    color: #e6e6e6;
+    font-family: "Segoe UI", "Inter", "Ubuntu", sans-serif;
+    font-size: 13px;
+}
+
+/* ── Stats Panel (left) ────────────────────────────────────────── */
+#StatsPanel {
+    background-color: #0e0e0e;
+    border-right: 2px solid #3c3c3c;
+}
+
+#PanelTitle {
+    color: #ffc800;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 14px 12px 4px 12px;
+}
+
+#SectionDivider {
+    background-color: #3c3c3c;
+    min-height: 1px;
+    max-height: 1px;
+}
+
+#TrackedLabel {
+    color: #64dc64;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+}
+
+#ExerciseTitle {
+    color: #e6e6e6;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px 2px 12px;
+}
+
+#ExerciseBreakdown {
+    color: #a0a0a0;
+    font-size: 11px;
+    padding: 0px 16px 4px 16px;
+}
+
+#FeedbackLabel {
+    color: #ff6060;
+    font-size: 11px;
+    padding: 2px 12px;
+}
+
+#NoDataLabel {
+    color: #505050;
+    font-size: 12px;
+    font-style: italic;
+    padding: 12px;
+}
+
+#FooterLabel {
+    color: #505050;
+    font-size: 10px;
+    padding: 6px 12px;
+    border-top: 1px solid #2d2d2d;
+}
+
+/* ── Scroll area inside stats panel ─────────────────────────────── */
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollBar:vertical {
+    background: #1e1e1e;
+    width: 6px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #444444;
+    border-radius: 3px;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+/* ── Video Panel (right) ─────────────────────────────────────────── */
+#VideoPanel {
+    background-color: #000000;
+}
+
+#VideoLabel {
+    background-color: #000000;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────── */
+QStatusBar {
+    background-color: #0e0e0e;
+    color: #505050;
+    font-size: 11px;
+    border-top: 1px solid #2d2d2d;
+}
