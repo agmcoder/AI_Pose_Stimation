@@ -12,12 +12,13 @@ COLORS = [(np.random.randint(50,255), np.random.randint(50,255),
 
 class Renderer:
     def render(self, frame, persons: list[Person]):
-        overlay = frame.copy()
+        # Draw directly on the frame — no copy, no addWeighted blend.
+        # cap.read() returns a new buffer each call so in-place mutation is safe.
         for p in persons:
             color = COLORS[p.track_id % 100]
-            self._draw_skeleton(overlay, p, color)
-            self._draw_info(overlay, p, color)
-        return cv2.addWeighted(overlay, 0.85, frame, 0.15, 0)
+            self._draw_skeleton(frame, p, color)
+            self._draw_info(frame, p, color)
+        return frame
 
     def _draw_skeleton(self, frame, person: Person, color):
         if person.keypoints is None:
