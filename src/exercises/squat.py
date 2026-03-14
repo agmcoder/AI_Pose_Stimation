@@ -1,6 +1,7 @@
 import numpy as np
 from ..core.interfaces import IExerciseDetector, IExerciseCounter
 from ..core.types import Person, ExerciseState
+from ..utils.vector_math import angle_at_vertex
 
 # Índices COCO keypoints
 _KP = {
@@ -11,14 +12,6 @@ _KP = {
 }
 
 _SIDES = ("left", "right")
-
-
-def _angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
-    """Ángulo en el vértice B formado por los vectores BA y BC."""
-    ba = a - b
-    bc = c - b
-    norm = np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6
-    return float(np.degrees(np.arccos(np.clip(np.dot(ba, bc) / norm, -1.0, 1.0))))
 
 
 def _best_side(kps, min_conf: float) -> str | None:
@@ -85,8 +78,8 @@ class SquatDetector(IExerciseDetector):
         kn = kps.coords[_KP[f"{side}_knee"]]
         an = kps.coords[_KP[f"{side}_ankle"]]
 
-        knee_angle = _angle(hi, kn, an)   # cadera → rodilla → tobillo
-        hip_angle  = _angle(sh, hi, kn)   # hombro → cadera → rodilla
+        knee_angle = angle_at_vertex(hi, kn, an)   # cadera → rodilla → tobillo
+        hip_angle  = angle_at_vertex(sh, hi, kn)   # hombro → cadera → rodilla
         return knee_angle, hip_angle
 
     # ------------------------------------------------------------------
