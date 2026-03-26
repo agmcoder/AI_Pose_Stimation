@@ -1,19 +1,21 @@
 exercises:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SQUAT — Bilateral, ángulos rodilla + cadera
+  # ═══════════════════════════════════════════════════════════════════════════
   squat:
     enabled: true
     min_confidence: 0.5
 
     knee:
-      # Rango válido de rodilla en posición DOWN
-      down_min: 80        # < 80° = demasiado profundo
-      down_max: 120       # > 120° = no baja suficiente
-      up_threshold: 155   # ángulo mínimo para considerar posición UP
+      down_min: 80
+      down_max: 120
+      up_threshold: 155
 
     hip:
-      # Rango válido de cadera en posición DOWN
-      down_min: 50        # < 50° = cadera demasiado cerrada
-      down_max: 100       # > 100° = cadera no baja suficiente
-      up_threshold: 150   # ángulo mínimo para considerar posición UP
+      down_min: 50
+      down_max: 100
+      up_threshold: 150
 
     feedback:
       valid_rep:    "✅ Rep completada"
@@ -22,3 +24,110 @@ exercises:
       hip_low:      "⚠️ Cadera demasiado cerrada"
       hip_high:     "⚠️ Baja mas la cadera"
       bad_form_rep: "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JUMPING JACKS — Bilateral simétrico, arm_angle + leg_spread
+  # ═══════════════════════════════════════════════════════════════════════════
+  jumping_jacks:
+    enabled: true
+    min_confidence: 0.5
+
+    arm:
+      open_threshold: 140     # brazos arriba/abiertos
+      closed_threshold: 60    # brazos abajo
+
+    leg:
+      open_threshold: 2.0     # separación tobillos / ancho caderas
+      closed_threshold: 1.3   # piernas juntas
+
+    feedback:
+      valid_rep:    "✅ Rep completada"
+      arms_low:     "⚠️ Sube mas los brazos"
+      legs_narrow:  "⚠️ Abre mas las piernas"
+      bad_form_rep: "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SKIPPING — Alternante L/R, elevación de rodilla normalizada por torso
+  # ═══════════════════════════════════════════════════════════════════════════
+  skipping:
+    enabled: true
+    min_confidence: 0.5
+
+    knee:
+      up_threshold: 0.30      # rodilla sube >= 30% de longitud de torso
+      down_threshold: 0.05    # rodilla vuelve abajo
+
+    feedback:
+      valid_rep:    "✅ Rodilla alta"
+      knee_too_low: "⚠️ Sube mas la rodilla"
+      bad_form_rep: "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PUNCH — Alternante L/R, extensión de brazo (ángulo hombro-codo-muñeca)
+  # ═══════════════════════════════════════════════════════════════════════════
+  punch:
+    enabled: true
+    min_confidence: 0.5
+
+    arm:
+      extend_threshold: 150   # brazo extendido
+      retract_threshold: 80   # brazo recogido
+
+    feedback:
+      valid_rep:        "✅ Golpe completado"
+      arm_not_extended: "⚠️ Extiende mas el brazo"
+      bad_form_rep:     "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # KICK — Alternante L/R, extensión de pierna (ángulo cadera-rodilla-tobillo)
+  # ═══════════════════════════════════════════════════════════════════════════
+  kick:
+    enabled: true
+    min_confidence: 0.5
+
+    leg:
+      extend_threshold: 150   # pierna extendida
+      retract_threshold: 110  # pierna recogida
+      min_knee_lift: 0.10     # elevación mínima de rodilla (% torso) para validar
+
+    feedback:
+      valid_rep:        "✅ Patada completada"
+      leg_not_extended: "⚠️ Extiende mas la pierna"
+      knee_too_low:     "⚠️ Eleva mas la rodilla"
+      bad_form_rep:     "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # FRONT JUMP — Posicional, desplazamiento vertical del centro de caderas
+  # ═══════════════════════════════════════════════════════════════════════════
+  front_jump:
+    enabled: true
+    min_confidence: 0.5
+
+    jump:
+      jump_threshold: 0.25    # elevación mínima (% torso) para considerar AIR
+      land_threshold: 0.08    # vuelta al suelo (% torso)
+      ema_alpha: 0.05         # coeficiente de suavizado para línea base
+
+    feedback:
+      valid_rep:     "✅ Salto completado"
+      jump_too_low:  "⚠️ Salta mas alto"
+      bad_form_rep:  "⚡ Rep no contada (mejorar tecnica)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # LATERAL JUMP — Posicional, desplazamiento horizontal + elevación vertical
+  # ═══════════════════════════════════════════════════════════════════════════
+  lateral_jump:
+    enabled: true
+    min_confidence: 0.5
+
+    jump:
+      lateral_threshold: 2.0  # desplazamiento lateral (x ancho caderas)
+      return_threshold: 0.8   # vuelta al centro (x ancho caderas)
+      min_vertical_lift: 0.10 # elevación vertical mínima (% torso) para confirmar salto
+      ema_alpha: 0.05         # coeficiente de suavizado para línea base
+
+    feedback:
+      valid_rep:        "✅ Salto lateral completado"
+      no_vertical_lift: "⚠️ Necesitas despegar del suelo"
+      jump_too_short:   "⚠️ Salta mas lejos"
+      bad_form_rep:     "⚡ Rep no contada (mejorar tecnica)"

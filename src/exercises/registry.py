@@ -1,10 +1,24 @@
+from .front_jump import FrontJumpDetector
+from .jumping_jacks import JumpingJacksDetector
+from .kick import KickDetector
+from .lateral_jump import LateralJumpDetector
+from .punch import PunchDetector
+from .skipping import SkippingDetector
 from .squat import SquatDetector
 from ..core.interfaces import IExerciseDetector
 
 
 class ExerciseRegistry:
     """Factory Pattern — añadir ejercicios sin tocar el pipeline."""
-    _REGISTRY = {"squat": SquatDetector}
+    _REGISTRY = {
+        "squat":         SquatDetector,
+        "jumping_jacks": JumpingJacksDetector,
+        "skipping":      SkippingDetector,
+        "punch":         PunchDetector,
+        "kick":          KickDetector,
+        "front_jump":    FrontJumpDetector,
+        "lateral_jump":  LateralJumpDetector,
+    }
 
     def __init__(self, cfg: dict):
         self._all_detectors: dict[str, IExerciseDetector] = {}

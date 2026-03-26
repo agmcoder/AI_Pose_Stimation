@@ -18,6 +18,10 @@ class FrameProcessor:
         self._counter  = counter
 
     def process(self, persons: list[Person]) -> list[Person]:
+        # For 0-1 persons the ThreadPoolExecutor overhead exceeds the benefit;
+        # process sequentially to avoid unnecessary synchronization cost.
+        if len(persons) <= 1:
+            return [self._process_person(p) for p in persons]
         futures = {
             self.executor.submit(self._process_person, p): p
             for p in persons

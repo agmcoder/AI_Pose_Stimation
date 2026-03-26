@@ -37,17 +37,17 @@ class FrameToQImageAdapter:
         if frame is None or frame.size == 0:
             return QPixmap()
 
-        # BGR → RGB and ensure contiguous memory
-        rgb = np.ascontiguousarray(frame[..., ::-1])
-        h, w, ch = rgb.shape
-        bytes_per_line = ch * w
+        # Format_BGR888 (Qt 6 / Qt 5.14+) reads channels in B-G-R order,
+        # so no channel swap is needed — eliminates a full-frame copy.
+        bgr = np.ascontiguousarray(frame)
+        h, w, ch = bgr.shape
 
         qimg = QImage(
-            rgb.data,
+            bgr.data,
             w,
             h,
-            bytes_per_line,
-            QImage.Format.Format_RGB888,
+            ch * w,
+            QImage.Format.Format_BGR888,
         )
-        # QImage may reference external buffer; copy before numpy GC
+        # QImage references external buffer; copy before numpy GC
         return QPixmap.fromImage(qimg.copy())
