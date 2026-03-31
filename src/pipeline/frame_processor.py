@@ -18,6 +18,11 @@ class FrameProcessor:
         self._counter  = counter
 
     def process(self, persons: list[Person]) -> list[Person]:
+        # Batch-capable detectors pre-compute in a single GPU call
+        for detector in self.registry.active_detectors.values():
+            if hasattr(detector, "prepare_batch"):
+                detector.prepare_batch(persons)
+
         # For 0-1 persons the ThreadPoolExecutor overhead exceeds the benefit;
         # process sequentially to avoid unnecessary synchronization cost.
         if len(persons) <= 1:

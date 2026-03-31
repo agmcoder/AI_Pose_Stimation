@@ -8,10 +8,18 @@ from .squat import SquatDetector
 from ..core.interfaces import IExerciseDetector
 
 
+def _create_squat(cfg: dict) -> IExerciseDetector:
+    """Factory: despacha entre evaluador por ángulos o LSTM según config."""
+    if cfg.get("evaluator_type") == "lstm":
+        from .squat_lstm import SquatLstmDetector
+        return SquatLstmDetector(cfg)
+    return SquatDetector(cfg)
+
+
 class ExerciseRegistry:
     """Factory Pattern — añadir ejercicios sin tocar el pipeline."""
     _REGISTRY = {
-        "squat":         SquatDetector,
+        "squat":         _create_squat,
         "jumping_jacks": JumpingJacksDetector,
         "skipping":      SkippingDetector,
         "punch":         PunchDetector,

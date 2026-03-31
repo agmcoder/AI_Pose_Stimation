@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 # Obtener la ruta del directorio donde está este script
 base_path = os.path.dirname(os.path.abspath(__file__))
 # Unir con el nombre del archivo (asumiendo que están en la misma carpeta)
-csv_path = os.path.join(base_path, 'dataset_squats.csv')
+csv_path = os.path.join(base_path, '../data/dataset_squats.csv')
 
 # Cargar datos
 df = pd.read_csv(csv_path)
@@ -58,8 +58,8 @@ history = model.fit(
 )
 
 # 5. GUARDAR MODELO
-model.save('squat_model.h5')
-print("✅ Modelo guardado como 'squat_model.h5'")
+model.save('../../models/lstm/squat_model.h5')
+print("✅ Modelo guardado como '../../models/lstm/squat_model.h5'")
 
 # Evaluación rápida
 loss, accuracy = model.evaluate(X_test, y_test)

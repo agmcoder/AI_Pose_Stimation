@@ -2,57 +2,30 @@ import json
 import pandas as pd
 import numpy as np
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
+from src.utils.normalization import normalize_keypoints
 
-def normalize_keypoints(kp_list):
-    """
-    Aplica normalización biomecánica:
-    1. Centra el esqueleto poniendo el origen (0,0) en el punto medio de las caderas.
-    2. Escala el esqueleto dividiendo por la longitud del torso.
-    """
-    kp = np.array(kp_list) # Convertir a matriz (17 puntos, 2 ejes)
-
-    # Identificadores de puntos YOLO/COCO
-    # Hombros: 5, 6 | Caderas: 11, 12
-    
-    # 1. Calcular el centro de la cadera (punto de referencia central)
-    hip_center = (kp[11] + kp[12]) / 2
-    
-    # Traslación: Restar el centro a todos los puntos
-    kp_centered = kp - hip_center
-    
-    # 2. Calcular factor de escala (Longitud del torso)
-    shoulder_center = (kp[5] + kp[6]) / 2
-    torso_size = np.linalg.norm(shoulder_center - hip_center)
-    
-    # Evitar división por cero
-    if torso_size == 0:
-        torso_size = 1.0
-        
-    # Escalado
-    kp_normalized = kp_centered / torso_size
-    
-    # Aplanar a una lista de 34 valores (x0, y0, x1, y1...)
-    return kp_normalized.flatten().tolist()
 
 def generate_training_csv(positive_file, negative_file, output_csv):
     """
     Lee los JSONL, normaliza y guarda en CSV.
     """
     dataset = []
-    
+
     # Definir los archivos y sus etiquetas (1 para Squat, 0 para Negativo)
     sources = [
         (positive_file, 1),
         (negative_file, 0)
     ]
-    
+
     print("--- Iniciando limpieza y normalización ---")
-    
+
     for file_path, label in sources:
         if not os.path.exists(file_path):
             print(f"⚠️ Alerta: No se encontró el archivo {file_path}")
             continue
-            
+
         count = 0
         with open(file_path, 'r') as f:
             for line in f:
@@ -78,17 +51,24 @@ def generate_training_csv(positive_file, negative_file, output_csv):
 
     # Convertir a DataFrame y guardar
     df = pd.DataFrame(dataset, columns=columns)
+    # Asegurar que el directorio de salida existe
+    os.makedirs(os.path.dirname(os.path.abspath(output_csv)), exist_ok=True)
     df.to_csv(output_csv, index=False)
-    
+
     print("-" * 40)
     print(f"📊 Dataset final guardado en: {output_csv}")
     print(f"📈 Total de muestras: {len(df)}")
     print(df['target'].value_counts()) # Muestra cuántos hay de cada tipo
 
-# --- CONFIGURACIÓN DE RUTAS ---
-# Asegúrate de que estos nombres coincidan con tus archivos
-generate_training_csv(
-    positive_file='../../../data/sessions/2026-03-26_18-45-34/squat.jsonl', 
-    negative_file='../../../data/sessions/2026-03-26_18-47-36/squat_negative.jsonl', 
-    output_csv='dataset_squats.csv'
-)
+
+if __name__ == "__main__":
+    # --- CONFIGURACIÓN DE RUTAS ---
+    # Asegúrate de que estos nombres coincidan con tus archivos
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, '../..'))
+
+    generate_training_csv(
+        positive_file=os.path.join(project_root, 'data/sessions/2026-03-26_18-45-34/squat.jsonl'),
+        negative_file=os.path.join(project_root, 'data/sessions/2026-03-26_18-47-36/squat_negative.jsonl'),
+        output_csv=os.path.join(script_dir, '../data/dataset_squats.csv')
+    )

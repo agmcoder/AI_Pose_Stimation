@@ -8,9 +8,16 @@ def select_device(preference: str = "auto") -> str:
     """
     # 1. Gestión de preferencia manual
     if preference != "auto":
-        dev = torch.device(preference)
-        logger.info(f"🚀 Usando dispositivo forzado: {dev}")
-        return dev
+        if preference == "cpu" and (
+            torch.cuda.is_available() or torch.backends.mps.is_available()
+        ):
+            logger.warning(
+                "⚠️ CPU forzado pero GPU disponible — usando GPU obligatoriamente"
+            )
+        else:
+            dev = torch.device(preference)
+            logger.info(f"🚀 Usando dispositivo forzado: {dev}")
+            return dev
 
     # 2. Prioridad 1: NVIDIA GPU (CUDA)
     if torch.cuda.is_available():

@@ -1,5 +1,5 @@
 model:
-  weights: yolo26x-pose.pt   # n/s/m/l/x según hardware
+  weights: models/yolo/yolo26x-pose.pt   # n/s/m/l/x según hardware
   confidence: 0.45
   iou_threshold: 0.45
   tracker: bytetrack.yaml    # integrado en Ultralytics
