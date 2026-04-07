@@ -3,8 +3,8 @@ __pycache__/
 
 # AI Models
     *.pt
-    *.h5
-    *.onnx
+    # *.h5
+    # *.onnx
 
 # Data Collections
 *.csv
