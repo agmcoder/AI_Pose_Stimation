@@ -37,7 +37,7 @@ def run_gym():
         down_angle = 100.0, # Ángulo máximo para considerar "abajo"
         show=True,
         kpts=[11, 13, 15], # caderas, rodillas, tobillos
-        model="yolo26x-pose.pt", 
+        model="models/weights/yolo26x-pose.pt", 
         #tracker = "bot_sort.yaml",
         conf = 0.65,
         iou = 0.7,

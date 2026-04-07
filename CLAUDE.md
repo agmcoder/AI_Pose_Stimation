@@ -97,7 +97,7 @@ Each exercise in `exercises.yml` defines:
 - Feedback messages for user guidance
 
 ### Model Configuration
-- **YOLO weights**: `models/yolo/yolo26x-pose.pt` (can use n/s/m/l/x variants)
+- **YOLO weights**: `models/weights/yolo26x-pose.pt` (can use n/s/m/l/x variants)
 - **Device**: `auto` (prefers CUDA if available)
 - **LSTM models**: Stored in `models/lstm/`, referenced in exercise config
 
