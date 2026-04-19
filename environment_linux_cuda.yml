@@ -24,6 +24,8 @@ dependencies:
       - filterpy
       - pytest>=9.0
       - pandas
-      - tensorflow
+      - tensorflow[and-cuda]
       - scikit-learn
       - matplotlib
+      - tf2onnx
+      - onnxruntime-gpu

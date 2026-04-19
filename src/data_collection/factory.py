@@ -12,9 +12,11 @@ _BACKEND_REGISTRY: dict[str, type] = {
 }
 
 
-def create_collectors(cfg: dict) -> list[IDataCollector]:
+def create_collectors(cfg: dict) -> tuple[list[IDataCollector], str]:
     """
     Factory: lee la config de data_collection y construye los collectors.
+
+    Returns (collectors, session_id).
 
     Ejemplo de config (en app.yml):
         data_collection:
@@ -28,11 +30,12 @@ def create_collectors(cfg: dict) -> list[IDataCollector]:
 
     OCP: registrar un nuevo backend = añadir una entrada a _BACKEND_REGISTRY.
     """
+    session_ts  = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
     if not cfg.get("enabled", False):
         logger.info("📊 Data collection deshabilitado")
-        return []
+        return [], session_ts
 
-    session_ts  = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_dir  = Path(cfg.get("output_dir", "data/sessions")) / session_ts
     collectors: list[IDataCollector] = []
 
@@ -51,4 +54,4 @@ def create_collectors(cfg: dict) -> list[IDataCollector]:
         collectors.append(collector)
         logger.info(f"📊 Data collector registrado: {backend_type} → {output_dir}/{prefix}.*")
 
-    return collectors
+    return collectors, session_ts

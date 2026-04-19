@@ -12,6 +12,13 @@ from src.core.types import (
     FrameRecord,
     RepRecord,
 )
+from src.utils.body_angles import ANGLE_NAMES
+from src.utils.velocity_tracker import VELOCITY_NAMES
+
+
+# Total columns: 6 identity + 4 bbox + 4 labels + 3 quality +
+#                19 angles + 5 velocity + 51 keypoints = 92
+_EXPECTED_COLS = 92
 
 
 def _make_snapshot(**overrides) -> ExerciseSnapshot:
@@ -27,9 +34,21 @@ def _make_frame_record(**overrides) -> FrameRecord:
         frame_number=42,
         track_id=7,
         fps=30.0,
+        session_id="2026-04-07_12-00-00",
+        video_id="0",
         bbox=(100.0, 200.0, 300.0, 400.0),
+        activity_label="exercise",
+        exercise_label="squat",
+        phase_label="down",
+        rep_id=3,
+        mean_kpt_conf=0.85,
+        visible_kpt_count=15,
+        is_valid_pose=True,
+        body_angles={name: 90.0 for name in ANGLE_NAMES},
+        velocity={name: 0.01 for name in VELOCITY_NAMES},
         keypoints_xy=np.random.rand(17, 2).astype(np.float32),
         keypoints_conf=np.random.rand(17).astype(np.float32),
+        keypoints_xy_norm=np.random.rand(17, 2).astype(np.float32),
         exercises={"squat": _make_snapshot()},
     )
     defaults.update(overrides)
@@ -83,22 +102,70 @@ class TestFrameRecord:
         parsed = json.loads(json.dumps(d))
         assert parsed["frame_number"] == 42
         assert parsed["track_id"] == 7
+        assert parsed["session_id"] == "2026-04-07_12-00-00"
+        assert parsed["exercise_label"] == "squat"
+        assert parsed["phase_label"] == "down"
+        assert parsed["rep_id"] == 3
+        assert parsed["is_valid_pose"] is True
         assert len(parsed["keypoints_xy"]) == 17
         assert len(parsed["keypoints_conf"]) == 17
+        assert len(parsed["keypoints_xy_norm"]) == 17
         assert "squat" in parsed["exercises"]
-        assert parsed["exercises"]["squat"]["phase"] == "down"
 
     def test_to_csv_row_length(self):
         record = _make_frame_record()
         row = record.to_csv_row()
-        # 4 metadata + 4 bbox + 17*3 keypoints = 59
-        assert len(row) == 59
+        assert len(row) == _EXPECTED_COLS
 
     def test_csv_header_length_matches_row(self):
         record = _make_frame_record()
         header = FrameRecord.csv_header()
         row = record.to_csv_row()
-        assert len(header) == 59
+        assert len(header) == _EXPECTED_COLS
+        assert len(header) == len(row)
+
+    def test_csv_header_contains_new_columns(self):
+        header = FrameRecord.csv_header()
+        assert "session_id" in header
+        assert "video_id" in header
+        assert "activity_label" in header
+        assert "exercise_label" in header
+        assert "phase_label" in header
+        assert "rep_id" in header
+        assert "mean_kpt_conf" in header
+        assert "visible_kpt_count" in header
+        assert "is_valid_pose" in header
+        assert "elbow_left_deg" in header
+        assert "trunk_deg" in header
+        assert "hip_center_vy" in header
+        assert "kp0_x_norm" in header
+        assert "kp16_conf" in header
+
+    def test_csv_row_order_identity_first(self):
+        record = _make_frame_record()
+        row = record.to_csv_row()
+        # First 6 should be identity fields
+        assert row[0] == "2026-04-07_12-00-00"  # session_id
+        assert row[1] == "0"                     # video_id
+        assert row[2] == 1710000000.0            # timestamp
+        assert row[3] == 42                      # frame_number
+        assert row[4] == 7                       # track_id
+        assert row[5] == 30.0                    # fps
+
+    def test_csv_row_angles_present(self):
+        record = _make_frame_record()
+        row = record.to_csv_row()
+        header = FrameRecord.csv_header()
+        idx = header.index("elbow_left_deg")
+        assert row[idx] == 90.0
+
+    def test_csv_row_none_angles(self):
+        """Angles can be None when pose quality is insufficient."""
+        record = _make_frame_record(body_angles={name: None for name in ANGLE_NAMES})
+        row = record.to_csv_row()
+        header = FrameRecord.csv_header()
+        idx = header.index("elbow_left_deg")
+        assert row[idx] is None
 
     def test_to_dict_exercises_multi(self):
         """Verifica soporte multi-ejercicio."""

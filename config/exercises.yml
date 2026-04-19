@@ -5,14 +5,14 @@ exercises:
   # ═══════════════════════════════════════════════════════════════════════════
   squat:
     enabled: true
-    min_confidence: 0.5
+    min_confidence: 0.6    # Aumentado para exigir mejor calidad de pose
     evaluator_type: lstm   # angle | lstm
-    down_prob_threshold: 0.7
+    down_prob_threshold: 0.85 # Aumentado (antes 0.7) para exigir más rigor al modelo
     up_prob_threshold: 0.3
     # LSTM evaluator settings
-    window_size: 30
-    model_path: "models/lstm/squat_model.h5"
-    min_buffer_frames: 5
+    window_size: 24
+    model_path: "models/lstm/lstm_exercise_detector.keras"
+    min_buffer_frames: 15
     device_preference: auto   # auto, gpu, cpu (prioriza GPU si está disponible)
 
     knee:

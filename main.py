@@ -58,7 +58,7 @@ def main() -> None:
     renderer  = Renderer()
 
     # ── Data collection ───────────────────────────────────────────────────────
-    collectors = create_collectors(app_cfg.get("data_collection", {}))
+    collectors, session_id = create_collectors(app_cfg.get("data_collection", {}))
     data_bus   = DataCollectionBus(collectors)
 
     # ── Qt application + window ───────────────────────────────────────────────
@@ -90,6 +90,8 @@ def main() -> None:
         data_bus=data_bus,
         renderer=renderer,
         presenter=presenter,
+        session_id=session_id,
+        video_id=str(app_cfg["source"]),
     )
 
     # Qt queued connections: signals delivered on the main thread event loop

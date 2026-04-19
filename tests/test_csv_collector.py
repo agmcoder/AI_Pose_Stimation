@@ -10,6 +10,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import numpy as np
 from src.core.types import FrameRecord, ExerciseSnapshot
 from src.data_collection.csv_collector import CsvCollector
+from src.utils.body_angles import ANGLE_NAMES
+from src.utils.velocity_tracker import VELOCITY_NAMES
+
+
+# Total: 6 identity + 4 bbox + 4 labels + 3 quality +
+#        19 angles + 5 velocity + 51 keypoints = 92
+_EXPECTED_COLS = 92
 
 
 def _make_frame_record(frame_number: int = 0) -> FrameRecord:
@@ -18,9 +25,21 @@ def _make_frame_record(frame_number: int = 0) -> FrameRecord:
         frame_number=frame_number,
         track_id=1,
         fps=30.0,
+        session_id="test-session",
+        video_id="0",
         bbox=(10.0, 20.0, 110.0, 220.0),
+        activity_label="exercise",
+        exercise_label="squat",
+        phase_label="down",
+        rep_id=0,
+        mean_kpt_conf=0.8,
+        visible_kpt_count=14,
+        is_valid_pose=True,
+        body_angles={name: 90.0 for name in ANGLE_NAMES},
+        velocity={name: 0.0 for name in VELOCITY_NAMES},
         keypoints_xy=np.random.rand(17, 2).astype(np.float32),
         keypoints_conf=np.random.rand(17).astype(np.float32),
+        keypoints_xy_norm=np.random.rand(17, 2).astype(np.float32),
         exercises={"squat": ExerciseSnapshot(name="squat", phase="down")},
     )
 
@@ -38,9 +57,10 @@ class TestCsvCollector:
             with open(filepath) as f:
                 reader = csv.reader(f)
                 header = next(reader)
-                assert header[0] == "timestamp"
-                assert "kp0_x" in header
-                assert len(header) == 59  # 4 meta + 4 bbox + 17*3 kps
+                assert header[0] == "session_id"
+                assert "kp0_x_norm" in header
+                assert "elbow_left_deg" in header
+                assert len(header) == _EXPECTED_COLS
 
     def test_row_count_matches_records(self):
         with tempfile.TemporaryDirectory() as tmpdir:

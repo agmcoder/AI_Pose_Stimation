@@ -25,6 +25,7 @@ from PySide6.QtCore import QThread, Signal
 
 from src.data_collection.bus import DataCollectionBus
 from src.data_collection.record_builder import build_frame_records
+from src.utils.velocity_tracker import VelocityTracker
 from src.models.yolo_pose import YoloPoseDetector
 from src.pipeline.frame_processor import FrameProcessor
 from src.pipeline.person_registry import PersonRegistry
@@ -69,6 +70,8 @@ class PipelineThread(QThread):
         data_bus: DataCollectionBus,
         renderer: Renderer,
         presenter: DashboardPresenter,
+        session_id: str = "",
+        video_id: str = "",
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -82,6 +85,9 @@ class PipelineThread(QThread):
         self._fps       = _FpsTracker(window_size=30)
         self._frame_no  = 0
         self._running   = True
+        self._session_id = session_id
+        self._video_id   = video_id
+        self._velocity   = VelocityTracker()
 
     # ── QThread entry point ───────────────────────────────────────────────────
 
@@ -107,7 +113,12 @@ class PipelineThread(QThread):
             if self._frame_no > 0 and self._frame_no % 30 == 0:
                 logger.debug("FPS: {:.1f} | Tracked: {}", current_fps, len(persons))
 
-            for record in build_frame_records(persons, self._frame_no, ts, current_fps):
+            for record in build_frame_records(
+                persons, self._frame_no, ts, current_fps,
+                session_id=self._session_id,
+                video_id=self._video_id,
+                velocity_tracker=self._velocity,
+            ):
                 self._data_bus.on_frame(record)
             self._frame_no += 1
 

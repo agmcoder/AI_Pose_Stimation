@@ -34,7 +34,7 @@ class ExerciseRegistry:
             if ex_cfg.get("enabled") and name in self._REGISTRY:
                 self._all_detectors[name] = self._REGISTRY[name](ex_cfg)
 
-        self._active_names: set[str] = set(self._all_detectors.keys())
+        self._active_names: set[str] = set()
 
     @property
     def active_detectors(self) -> dict[str, IExerciseDetector]:
