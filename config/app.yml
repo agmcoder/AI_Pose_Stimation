@@ -1,5 +1,5 @@
 app:
-  source: 0
+  source: /home/alejandro/Downloads/IMG_6261_squats.MOV #0
   display_window: true
   target_fps: 30
   max_persons: 20
@@ -19,6 +19,14 @@ app:
   data_collection:
     enabled: true
     output_dir: "data/sessions"
+    deferred_labeling:
+      confirm_window: 12       # frames of consecutive exercise signal to confirm
+      cooldown_window: 8       # frames of no-exercise before closing event
+      max_buffer_size: 300     # safety cap for per-track buffer
+      enter_threshold: 0.5    # LSTM confidence to enter exercise (hysteresis high)
+      exit_threshold: 0.3     # LSTM confidence to exit exercise (hysteresis low)
+      min_segment_frames: 8   # minimum frames for a valid segment (reject noise)
+      merge_gap_frames: 5     # merge adjacent segments with gaps smaller than this
     backends:
       - type: csv
         filename_prefix: "frames"

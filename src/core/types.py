@@ -71,11 +71,30 @@ class FrameRecord:
     # ── Detection ─────────────────────────────────────────────────────────
     bbox: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
 
-    # ── Labels ────────────────────────────────────────────────────────────
-    activity_label: str = "no_exercise"  # "exercise" | "no_exercise"
-    exercise_label: str = "none"         # canonical name or "none"
-    phase_label: str = "none"            # normalized phase or "none"
+    # ── Labels (final — assigned by DeferredLabelBuffer) ──────────────────
+    activity_label: str = "pending"      # final: "exercise" | "no_exercise" | "pending"
+    exercise_label: str = "pending"      # final: canonical name, "none", or "pending"
+    phase_label: str = "pending"         # final: normalized phase, "none", or "pending"
     rep_id: int = 0
+
+    # ── Raw labels (instantaneous, from detector) ─────────────────────────
+    raw_activity_label: str = "none"     # detector's instantaneous label
+    raw_exercise_label: str = "none"
+    raw_phase_label: str = "none"
+    raw_confidence: float = 0.0          # LSTM prob or 1.0 for angle-based
+
+    # ── Deferred labeling metadata ────────────────────────────────────────
+    decision_status: str = "pending"     # "pending" | "confirmed" | "retroactive"
+    event_id: int = 0                    # monotonic ID for exercise event group
+    label_source: str = "immediate"      # "immediate" | "retroactive" | "smoothed"
+
+    # ── Temporal segmentation metadata ────────────────────────────────────
+    segment_id: int = 0                  # unique ID per detected exercise segment
+    segment_start_frame: int = -1        # first frame of the segment (-1 = N/A)
+    segment_end_frame: int = -1          # last frame of the segment (-1 = N/A)
+    segment_start_time: float = -1.0     # timestamp of first frame (-1 = N/A)
+    segment_end_time: float = -1.0       # timestamp of last frame (-1 = N/A)
+    prediction_confidence: float = 0.0   # mean LSTM confidence across the segment
 
     # ── Quality ───────────────────────────────────────────────────────────
     mean_kpt_conf: float = 0.0
@@ -111,7 +130,20 @@ class FrameRecord:
             "activity_label": self.activity_label,
             "exercise_label": self.exercise_label,
             "phase_label": self.phase_label,
+            "raw_activity_label": self.raw_activity_label,
+            "raw_exercise_label": self.raw_exercise_label,
+            "raw_phase_label": self.raw_phase_label,
+            "raw_confidence": self.raw_confidence,
+            "decision_status": self.decision_status,
+            "event_id": self.event_id,
+            "label_source": self.label_source,
             "rep_id": self.rep_id,
+            "segment_id": self.segment_id,
+            "segment_start_frame": self.segment_start_frame,
+            "segment_end_frame": self.segment_end_frame,
+            "segment_start_time": self.segment_start_time,
+            "segment_end_time": self.segment_end_time,
+            "prediction_confidence": self.prediction_confidence,
             "mean_kpt_conf": self.mean_kpt_conf,
             "visible_kpt_count": self.visible_kpt_count,
             "is_valid_pose": self.is_valid_pose,
@@ -126,9 +158,10 @@ class FrameRecord:
     def to_csv_row(self) -> list:
         """
         Fila plana para CSV — orden canónico:
-          identity (6) + bbox (4) + labels (4) + quality (3) +
-          angles (19) + velocity (5) + keypoints_norm (51)
-        = 92 columnas
+          identity (6) + bbox (4) + final_labels (4) + raw_labels+meta (7) +
+          segment_meta (6) + quality (3) + angles (19) + velocity (5) +
+          keypoints_norm (51)
+        = 105 columnas
         """
         row: list = [
             # ── Identity (6) ──
@@ -140,11 +173,26 @@ class FrameRecord:
             self.fps,
             # ── Bbox (4) ──
             *self.bbox,
-            # ── Labels (4) ──
+            # ── Final labels (4) ──
             self.activity_label,
             self.exercise_label,
             self.phase_label,
             self.rep_id,
+            # ── Raw labels + deferred metadata (7) ──
+            self.raw_activity_label,
+            self.raw_exercise_label,
+            self.raw_phase_label,
+            self.raw_confidence,
+            self.decision_status,
+            self.event_id,
+            self.label_source,
+            # ── Temporal segmentation metadata (6) ──
+            self.segment_id,
+            self.segment_start_frame,
+            self.segment_end_frame,
+            self.segment_start_time,
+            self.segment_end_time,
+            self.prediction_confidence,
             # ── Quality (3) ──
             self.mean_kpt_conf,
             self.visible_kpt_count,
@@ -171,8 +219,14 @@ class FrameRecord:
             "session_id", "video_id", "timestamp", "frame_number", "track_id", "fps",
             # Bbox (4)
             "bbox_x1", "bbox_y1", "bbox_x2", "bbox_y2",
-            # Labels (4)
+            # Final Labels (4)
             "activity_label", "exercise_label", "phase_label", "rep_id",
+            # Raw labels + deferred metadata (7)
+            "raw_activity_label", "raw_exercise_label", "raw_phase_label",
+            "raw_confidence", "decision_status", "event_id", "label_source",
+            # Temporal segmentation metadata (6)
+            "segment_id", "segment_start_frame", "segment_end_frame",
+            "segment_start_time", "segment_end_time", "prediction_confidence",
             # Quality (3)
             "mean_kpt_conf", "visible_kpt_count", "is_valid_pose",
         ]

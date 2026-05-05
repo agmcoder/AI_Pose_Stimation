@@ -16,9 +16,10 @@ from src.utils.body_angles import ANGLE_NAMES
 from src.utils.velocity_tracker import VELOCITY_NAMES
 
 
-# Total columns: 6 identity + 4 bbox + 4 labels + 3 quality +
-#                19 angles + 5 velocity + 51 keypoints = 92
-_EXPECTED_COLS = 92
+# Total columns: 6 identity + 4 bbox + 4 final_labels + 7 raw+meta +
+#                6 segment_meta + 3 quality + 19 angles + 5 velocity +
+#                51 keypoints = 105
+_EXPECTED_COLS = 105
 
 
 def _make_snapshot(**overrides) -> ExerciseSnapshot:
@@ -41,6 +42,13 @@ def _make_frame_record(**overrides) -> FrameRecord:
         exercise_label="squat",
         phase_label="down",
         rep_id=3,
+        raw_activity_label="squat",
+        raw_exercise_label="squat",
+        raw_phase_label="down",
+        raw_confidence=0.92,
+        decision_status="confirmed",
+        event_id=1,
+        label_source="immediate",
         mean_kpt_conf=0.85,
         visible_kpt_count=15,
         is_valid_pose=True,
@@ -140,6 +148,21 @@ class TestFrameRecord:
         assert "hip_center_vy" in header
         assert "kp0_x_norm" in header
         assert "kp16_conf" in header
+        # New deferred-label columns
+        assert "raw_activity_label" in header
+        assert "raw_exercise_label" in header
+        assert "raw_phase_label" in header
+        assert "raw_confidence" in header
+        assert "decision_status" in header
+        assert "event_id" in header
+        assert "label_source" in header
+        # Temporal segmentation columns
+        assert "segment_id" in header
+        assert "segment_start_frame" in header
+        assert "segment_end_frame" in header
+        assert "segment_start_time" in header
+        assert "segment_end_time" in header
+        assert "prediction_confidence" in header
 
     def test_csv_row_order_identity_first(self):
         record = _make_frame_record()

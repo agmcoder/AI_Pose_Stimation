@@ -92,6 +92,7 @@ def main() -> None:
         presenter=presenter,
         session_id=session_id,
         video_id=str(app_cfg["source"]),
+        deferred_cfg=app_cfg.get("data_collection", {}).get("deferred_labeling"),
     )
 
     # Qt queued connections: signals delivered on the main thread event loop

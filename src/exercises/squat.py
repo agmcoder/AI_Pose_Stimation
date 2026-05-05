@@ -120,6 +120,7 @@ class SquatDetector(IExerciseDetector):
 
                 if state.valid_down:
                     counter.record(person.track_id, "squat")
+                    state.rep_count = counter.by_id("squat").get(person.track_id, 0)
                     state.feedback = self.fb["valid_rep"]
                 else:
                     state.feedback = self.fb["bad_form_rep"]
