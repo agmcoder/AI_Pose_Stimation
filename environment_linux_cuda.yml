@@ -27,5 +27,6 @@ dependencies:
       - tensorflow[and-cuda]
       - scikit-learn
       - matplotlib
+      - seaborn
       - tf2onnx
       - onnxruntime-gpu

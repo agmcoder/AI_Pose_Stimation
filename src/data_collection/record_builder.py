@@ -8,7 +8,6 @@ here — the single funnel between the domain pipeline and the data collectors.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 from src.core.types import Person, ExerciseSnapshot, FrameRecord
@@ -16,15 +15,6 @@ from src.utils.body_angles import compute_body_angles
 from src.utils.keypoint_normalizer import normalize_keypoints
 from src.utils.pose_quality import compute_pose_quality
 from src.utils.velocity_tracker import VelocityTracker
-
-# Label normalization (shared with training pipeline)
-try:
-    from ...training.scripts.label_normalizer import normalize_phase_label
-except ImportError:
-    # Fallback for when training scripts are not in path
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from training.scripts.label_normalizer import normalize_phase_label
 
 
 def build_frame_records(
@@ -69,8 +59,10 @@ def build_frame_records(
                 person.track_id, coords, scores, person.bbox,
             )
 
-        # ── 5. Labels from exercise state ────────────────────────────────
-        activity_label, exercise_label, phase_label, rep_id = _extract_labels(person)
+        # ── 5. Labels from exercise state ──────────────────────────────
+        raw_activity, raw_exercise, raw_phase, rep_id, raw_conf = (
+            _extract_labels(person)
+        )
 
         # ── 6. Exercise snapshots ────────────────────────────────────────
         snapshots = {
@@ -92,10 +84,19 @@ def build_frame_records(
             session_id=session_id,
             video_id=video_id,
             bbox=person.bbox,
-            activity_label=activity_label,
-            exercise_label=exercise_label,
-            phase_label=phase_label,
+            # Final labels — pending until DeferredLabelBuffer resolves
+            activity_label="pending",
+            exercise_label="pending",
+            phase_label="pending",
             rep_id=rep_id,
+            # Raw labels — instantaneous from detector
+            raw_activity_label=raw_activity,
+            raw_exercise_label=raw_exercise,
+            raw_phase_label=raw_phase,
+            raw_confidence=raw_conf,
+            decision_status="pending",
+            event_id=0,
+            label_source="immediate",
             mean_kpt_conf=quality.mean_kpt_conf,
             visible_kpt_count=quality.visible_kpt_count,
             is_valid_pose=quality.is_valid_pose,
@@ -110,30 +111,35 @@ def build_frame_records(
     return records
 
 
-def _extract_labels(person: Person) -> tuple[str, str, str, int]:
+def _extract_labels(person: Person) -> tuple[str, str, str, int, float]:
     """
-    Extract (activity_label, exercise_label, phase_label, rep_id) from
-    active exercises.
+    Extract (activity_label, exercise_label, phase_label, rep_id, confidence)
+    from active exercises.
 
     Conventions:
-    - If no exercise is active → ("none", "none", "none", 0)
+    - If no exercise is active → ("none", "none", "none", 0, 0.0)
     - If one exercise is active → that exercise's name/phase
     - If multiple → the first active exercise (alphabetically for stability)
     - rep_id comes from ExerciseState.rep_count
-    - activity_label: "none" or canonical exercise name
-    - exercise_label: canonical exercise name or "none"
-    - phase_label: normalized to "phase_1", "phase_2", or "none"
+    - confidence: LSTM's probability (stored in ExerciseState.angle) or
+      1.0 for angle-based detectors when in an active phase
     """
     if not person.exercises:
-        return "none", "none", "none", 0
+        return "none", "none", "none", 0, 0.0
 
     # Sort for deterministic ordering when multiple exercises active
     names = sorted(person.exercises.keys())
     primary = names[0]
     state = person.exercises[primary]
 
-    # Normalize phase label using universal schema
-    phase_label = normalize_phase_label(primary, state.phase)
-    # activity_label is the canonical exercise name (primary)
-    # exercise_label is the same as primary (canonical)
-    return primary, primary, phase_label, state.rep_count
+    # Phase label: pass through the detector's phase ("up"/"down") so that
+    # downstream segmentation can use it for rep boundary detection.
+    # Frames without a meaningful phase keep "none".
+    phase_label = state.phase if state.phase in ("up", "down") else "none"
+
+    # Extract confidence:
+    # - For LSTM detectors, state.angle holds the model's probability
+    # - For angle-based detectors, use 1.0 when in active phase, 0.0 otherwise
+    confidence = float(state.angle) if state.angle is not None else 0.0
+
+    return primary, primary, phase_label, state.rep_count, confidence

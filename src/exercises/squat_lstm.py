@@ -36,10 +36,18 @@ from ..utils.velocity_tracker import VELOCITY_NAMES, VelocityTracker
 
 class SquatLstmDetector(IExerciseDetector):
     """
-    Detector de sentadillas basado en LSTM.
+    Hybrid squat detector: LSTM for activity + angles for phase/reps.
 
-    Usa una ventana deslizante de 77 features biomecánicas para predecir
-    la probabilidad de estar en posición DOWN (sentadilla).
+    Architecture:
+        - LSTM binary classifier: P(squat) — detects IF the person is
+          doing squats (activity detection). Stays high (~0.99) during
+          the entire exercise.
+        - Knee angle state machine: detects UP/DOWN phases and counts
+          reps using biomechanical thresholds from exercises.yml.
+
+    The LSTM does NOT predict up/down phases — it was trained as a
+    binary squat-vs-none classifier. Phase detection relies on knee
+    angle oscillation (180° standing → ~90° squatting → 180° standing).
 
     Features (77 total):
         - Quality (2): mean_kpt_conf, visible_kpt_count
@@ -57,6 +65,12 @@ class SquatLstmDetector(IExerciseDetector):
         self.up_threshold   = cfg.get("up_prob_threshold", 0.3)
         self.min_buffer     = cfg.get("min_buffer_frames", 5)
         self.fb             = cfg["feedback"]
+
+        # ── Knee-angle thresholds for phase detection ─────────────────
+        knee_cfg = cfg.get("knee", {})
+        self.knee_down_max   = knee_cfg.get("down_max", 120)    # ≤ this → entering DOWN
+        self.knee_down_min   = knee_cfg.get("down_min", 80)     # valid range lower bound
+        self.knee_up_thresh  = knee_cfg.get("up_threshold", 155) # ≥ this → back to UP
 
         # ── Resolve model & side-file paths ──────────────────────────────
         model_path = Path(cfg["model_path"])
@@ -255,6 +269,7 @@ class SquatLstmDetector(IExerciseDetector):
 
         if person.track_id in self._cached_probs:
             prob = self._cached_probs.pop(person.track_id)
+            # Store LSTM probability for downstream use (DeferredLabelBuffer)
             state.angle = prob
             return self._update_phase(state, prob, person, counter)
 
@@ -262,8 +277,33 @@ class SquatLstmDetector(IExerciseDetector):
         return state
 
     # ------------------------------------------------------------------
-    # Máquina de estados: UP → DOWN → UP
+    # Hybrid state machine: LSTM for activity + knee angles for phase
     # ------------------------------------------------------------------
+
+    def _get_knee_angle(self, person: Person) -> float | None:
+        """
+        Compute average knee angle (left + right) from keypoints.
+        Returns None if keypoints are unavailable or low confidence.
+        """
+        if person.keypoints is None:
+            return None
+
+        coords = person.keypoints.coords
+        scores = person.keypoints.scores
+
+        # Keypoint indices: hip=11/12, knee=13/14, ankle=15/16
+        # Check minimum confidence for knee angle computation
+        required = [11, 12, 13, 14, 15, 16]
+        if any(scores[i] < self.min_conf for i in required):
+            return None
+
+        body_angles = compute_body_angles(coords, scores)
+        knee_l = body_angles.get("knee_left_deg")
+        knee_r = body_angles.get("knee_right_deg")
+
+        if knee_l is not None and knee_r is not None:
+            return (knee_l + knee_r) / 2.0
+        return knee_l or knee_r
 
     def _update_phase(
         self,
@@ -272,21 +312,60 @@ class SquatLstmDetector(IExerciseDetector):
         person: Person,
         counter: IExerciseCounter,
     ) -> ExerciseState:
+        """
+        Hybrid phase detection:
+          - LSTM prob > down_threshold → we're in a squat activity
+          - Within active squat: knee angle drives UP/DOWN transitions
+          - Rep counted on DOWN → UP transition (if valid_down)
+
+        The LSTM is a binary classifier that outputs ~0.99 during the
+        entire squat session. It does NOT oscillate between phases.
+        Knee angles (180° standing ↔ ~90° squatting) provide the
+        actual phase signal.
+        """
+        # ── Gate: only run phase detection if LSTM says "squat" ───────
+        # Use down_threshold as activity gate (prob >= 0.85 → active squat)
+        if prob < self.up_threshold:
+            # LSTM says clearly NOT a squat — reset to "up" (standing)
+            state.phase = "up"
+            state.valid_down = False
+            return state
+
+        # ── Phase detection via knee angles ───────────────────────────
+        knee_angle = self._get_knee_angle(person)
+        if knee_angle is None:
+            # Can't compute angle — keep current phase, don't transition
+            return state
+
+        # Store the knee angle for downstream consumers
+        state.angles["knee_avg"] = knee_angle
 
         if state.phase == "up":
-            if prob >= self.down_threshold:
-                state.phase      = "down"
-                state.valid_down = True
-                state.feedback   = ""
+            # Transition UP → DOWN when knees bend past threshold
+            if knee_angle <= self.knee_down_max:
+                state.phase = "down"
+                # Validate depth: knee angle within acceptable range
+                if self.knee_down_min <= knee_angle <= self.knee_down_max:
+                    state.valid_down = True
+                state.feedback = ""
 
         elif state.phase == "down":
-            if prob <= self.up_threshold:
+            # Continue validating depth while in DOWN
+            if self.knee_down_min <= knee_angle <= self.knee_down_max:
+                state.valid_down = True
+
+            # Transition DOWN → UP when knees extend past threshold
+            if knee_angle >= self.knee_up_thresh:
                 state.phase = "up"
                 if state.valid_down:
                     counter.record(person.track_id, "squat")
+                    state.rep_count = counter.by_id("squat").get(
+                        person.track_id, 0
+                    )
                     state.feedback = self.fb["valid_rep"]
                 else:
                     state.feedback = self.fb["bad_form_rep"]
                 state.valid_down = False
 
         return state
+

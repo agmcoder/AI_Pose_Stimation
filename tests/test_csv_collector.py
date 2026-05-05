@@ -14,9 +14,9 @@ from src.utils.body_angles import ANGLE_NAMES
 from src.utils.velocity_tracker import VELOCITY_NAMES
 
 
-# Total: 6 identity + 4 bbox + 4 labels + 3 quality +
-#        19 angles + 5 velocity + 51 keypoints = 92
-_EXPECTED_COLS = 92
+# Total: 6 identity + 4 bbox + 4 final_labels + 7 raw+meta + 6 segment_meta +
+#        3 quality + 19 angles + 5 velocity + 51 keypoints = 105
+_EXPECTED_COLS = 105
 
 
 def _make_frame_record(frame_number: int = 0) -> FrameRecord:
@@ -32,6 +32,13 @@ def _make_frame_record(frame_number: int = 0) -> FrameRecord:
         exercise_label="squat",
         phase_label="down",
         rep_id=0,
+        raw_activity_label="squat",
+        raw_exercise_label="squat",
+        raw_phase_label="down",
+        raw_confidence=0.85,
+        decision_status="confirmed",
+        event_id=1,
+        label_source="immediate",
         mean_kpt_conf=0.8,
         visible_kpt_count=14,
         is_valid_pose=True,

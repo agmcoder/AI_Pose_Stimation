@@ -24,6 +24,7 @@ from loguru import logger
 from PySide6.QtCore import QThread, Signal
 
 from src.data_collection.bus import DataCollectionBus
+from src.data_collection.deferred_label_buffer import DeferredLabelBuffer
 from src.data_collection.record_builder import build_frame_records
 from src.utils.velocity_tracker import VelocityTracker
 from src.models.yolo_pose import YoloPoseDetector
@@ -72,6 +73,7 @@ class PipelineThread(QThread):
         presenter: DashboardPresenter,
         session_id: str = "",
         video_id: str = "",
+        deferred_cfg: dict | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -88,6 +90,18 @@ class PipelineThread(QThread):
         self._session_id = session_id
         self._video_id   = video_id
         self._velocity   = VelocityTracker()
+
+        # Deferred label buffer — sits between record_builder and data_bus
+        dl_cfg = deferred_cfg or {}
+        self._label_buffer = DeferredLabelBuffer(
+            confirm_window=dl_cfg.get("confirm_window", 12),
+            cooldown_window=dl_cfg.get("cooldown_window", 8),
+            max_buffer_size=dl_cfg.get("max_buffer_size", 300),
+            enter_threshold=dl_cfg.get("enter_threshold", 0.5),
+            exit_threshold=dl_cfg.get("exit_threshold", 0.3),
+            min_segment_frames=dl_cfg.get("min_segment_frames", 8),
+            merge_gap_frames=dl_cfg.get("merge_gap_frames", 5),
+        )
 
     # ── QThread entry point ───────────────────────────────────────────────────
 
@@ -119,13 +133,18 @@ class PipelineThread(QThread):
                 video_id=self._video_id,
                 velocity_tracker=self._velocity,
             ):
-                self._data_bus.on_frame(record)
+                for finalized in self._label_buffer.push(record):
+                    self._data_bus.on_frame(finalized)
             self._frame_no += 1
 
             # ── Render + ViewModels ──────────────────────────────────────────
             annotated = self._renderer.render(frame, persons)
             self.frame_ready.emit(self._presenter.build_video_vm(annotated))
             self.stats_ready.emit(self._presenter.build_dashboard_vm(persons, current_fps))
+
+        # ── End-of-stream: flush remaining buffered frames ────────────────
+        for finalized in self._label_buffer.flush_all():
+            self._data_bus.on_frame(finalized)
 
         logger.info("⏹️  Pipeline thread stopped")
 
